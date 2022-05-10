@@ -20,12 +20,17 @@ function send(msg, chat_id, api) {
     UrlFetchApp.fetch('https://api.telegram.org/bot' + api + '/', data);
 }
 
+function test() {
+  const now = new Date()
+  Logger.log(CalendarApp.getCalendarById(gmail_login_2).getEventsForDay(now)[0].getDescription())
+}
+
 /**
  * The function gets all events for today from 2 calendars and sorts them
  * 
  * @return {array} events_details_arr all sorted events for today
  */
-function get_events() {
+function getEvents() {
   const calendar_ct = CalendarApp.getCalendarById(gmail_login_1)
   const calendar_ns = CalendarApp.getCalendarById(gmail_login_2)
   const now = new Date();
@@ -33,18 +38,32 @@ function get_events() {
   const events_ns = calendar_ns.getEventsForDay(now);
   const events = events_ct.concat(events_ns);
 
-  let events_details_arr = new Array();
+  const events_details_arr = new Array();
 
   for (i=0; i<events.length; i++) {
-    let title = events[i].getTitle();
+    let descr = events[i].getDescription().toString();
+    const title = events[i].getTitle();
     let start_time = events[i].getStartTime();
     start_time = new Date(start_time.getTime() + (6 * 60 * 60 * 1000)) //6 - разница во времени между NY и Berlin
-    events_details_arr.push([title,start_time]);
+    if (descr === '') {
+      events_details_arr.push([title,start_time]);
+    } else {
+      events_details_arr.push([title,start_time,`\n${descr}`]);
+    }
+    
   }
 
   bubble_sort(events_details_arr)
 
   return events_details_arr
+
+  /*
+[[Technical English C1 online, Tue May 10 13:00:00 GMT-04:00 2022, 
+], [How does a health insurance work, Tue May 10 15:30:00 GMT-04:00 2022, 
+<span><a href="https://tu-ilmenau.webex.com/tu-ilmenau-en/j.php?MTID=mbd57e04d2b4f2eaea7c1c11617672d0c">https://tu-ilmenau.webex.com/tu-ilmenau-en/j.php?MTID=mbd57e04d2b4f2eaea7c1c11617672d0c</a></span>], [Salary in labor market, Tue May 10 18:00:00 GMT-04:00 2022, 
+]]
+
+  */
 }
 
 
@@ -86,7 +105,7 @@ function time_to_string(date) {
 
 
 function send_next_event() {
-  const today_events_arr = get_events();
+  const today_events_arr = getEvents();
   const cur_time = new Date(new Date().getTime() + (6 * 60 * 60 * 1000)) //6 - разница во времени между NY и Berlin
   let msg = new String();
 
@@ -95,7 +114,7 @@ function send_next_event() {
     if (substract/36000000 < 0.02 && substract > 0.1) {
       today_events_arr[i][1] = time_to_string(today_events_arr[i][1]);
 
-      if (msg == "") {
+    if (msg == "") {
         msg = `${today_events_arr[i].flat()}`
       } else {
         msg = `${msg}\n${today_events_arr[i].flat()}`
@@ -105,36 +124,37 @@ function send_next_event() {
   }
 }
 
-function send_all_events(msg_data) {
-  const today_events_arr = get_events();
+function send_all_events() {
+  const today_events_arr = getEvents();
   let msg = new String();
 
-  for (i=0; i<today_events_arr.length; i++) {
-    today_events_arr[i][1] = time_to_string(today_events_arr[i][1]);
-    if (msg == "") {
-      msg = `${today_events_arr[i].flat()}`
-    } else {
-      msg = `${msg}\n${today_events_arr[i].flat()}`
+  if (today_events_arr.length !== 0) {
+    for (i=0; i<today_events_arr.length; i++) {
+      today_events_arr[i][1] = time_to_string(today_events_arr[i][1]);
+      if (msg == "") {
+        msg = `${i+1} ${today_events_arr[i].flat()}`
+      } else {
+        msg = `${msg}\n${i+1} ${today_events_arr[i].flat()}`
+      }
     }
-  }
+    send(msg, chat_id_root, API);
 
-  if (msg.length>0) {
-    send(msg, msg_data.chat_id, API);
+    Logger.log(msg)
   } else {
-    send('В календаре нет планов', msg_data.chat_id, API);
+    send('В календаре нет планов', chat_id_root, API);
   }
 }
 
 function send_all_events_trigger() {
-  const today_events_arr = get_events();
+  const today_events_arr = getEvents();
   let msg = new String();
 
   for (i=0; i<today_events_arr.length; i++) {
     today_events_arr[i][1] = time_to_string(today_events_arr[i][1]);
     if (msg == "") {
-      msg = `${today_events_arr[i].flat()}`
+      msg = `${i+1} ${today_events_arr[i].flat()}`
     } else {
-      msg = `${msg}\n${today_events_arr[i].flat()}`
+      msg = `${msg}\n${i+1} ${today_events_arr[i].flat()}`
     }
   }
 
