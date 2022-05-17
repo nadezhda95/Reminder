@@ -1,6 +1,7 @@
 function bot_logic(msg_data) {
   if (msg_data.chat_id == chat_id_root) {
     if (msg_data.command == "/all") {
+      send('test',msg_data.chat_id,API)
       send_all_events();
     }
   } else {
