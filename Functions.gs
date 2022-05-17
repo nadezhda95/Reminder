@@ -20,11 +20,6 @@ function send(msg, chat_id, api) {
     UrlFetchApp.fetch('https://api.telegram.org/bot' + api + '/', data);
 }
 
-function test() {
-  const now = new Date()
-  Logger.log(CalendarApp.getCalendarById(gmail_login_2).getEventsForDay(now)[0].getDescription())
-}
-
 /**
  * The function gets all events for today from 2 calendars and sorts them
  * 
@@ -37,34 +32,27 @@ function getEvents() {
   const events_ct = calendar_ct.getEventsForDay(now);
   const events_ns = calendar_ns.getEventsForDay(now);
   const events = events_ct.concat(events_ns);
-
+  const regExp = /<(?!\/?a>|\/?a href|\/?br)[^>]+>/g;
   const events_details_arr = new Array();
 
-  for (i=0; i<events.length; i++) {
-    let descr = events[i].getDescription().toString();
-    const title = events[i].getTitle();
-    let start_time = events[i].getStartTime();
+  events.forEach((el) => {
+    let descr = el.getDescription().toString();
+    const title = el.getTitle();
+    let start_time = el.getStartTime();
     start_time = new Date(start_time.getTime() + (6 * 60 * 60 * 1000)) //6 - разница во времени между NY и Berlin
     if (descr === '') {
       events_details_arr.push([title,start_time]);
     } else {
+      descr = descr.replace(regExp,'').replace(/<br>/g,`\n`);
       events_details_arr.push([title,start_time,`\n${descr}`]);
     }
-    
-  }
+  })
 
   bubble_sort(events_details_arr)
 
   return events_details_arr
-
-  /*
-[[Technical English C1 online, Tue May 10 13:00:00 GMT-04:00 2022, 
-], [How does a health insurance work, Tue May 10 15:30:00 GMT-04:00 2022, 
-<span><a href="https://tu-ilmenau.webex.com/tu-ilmenau-en/j.php?MTID=mbd57e04d2b4f2eaea7c1c11617672d0c">https://tu-ilmenau.webex.com/tu-ilmenau-en/j.php?MTID=mbd57e04d2b4f2eaea7c1c11617672d0c</a></span>], [Salary in labor market, Tue May 10 18:00:00 GMT-04:00 2022, 
-]]
-
-  */
 }
+
 
 
 /**
@@ -129,17 +117,18 @@ function send_all_events() {
   let msg = new String();
 
   if (today_events_arr.length !== 0) {
-    for (i=0; i<today_events_arr.length; i++) {
-      today_events_arr[i][1] = time_to_string(today_events_arr[i][1]);
+    today_events_arr.forEach((el,ind) => {
+      el[1] = time_to_string(el[1])
       if (msg == "") {
-        msg = `${i+1} ${today_events_arr[i].flat()}`
+        msg = `${ind+1} ${el.flat()}`
       } else {
-        msg = `${msg}\n${i+1} ${today_events_arr[i].flat()}`
+        msg = `${msg}\n${ind+1} ${el.flat()}`
       }
-    }
+      Logger.log(msg)
+    })
+
     send(msg, chat_id_root, API);
 
-    Logger.log(msg)
   } else {
     send('В календаре нет планов', chat_id_root, API);
   }
