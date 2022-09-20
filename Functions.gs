@@ -26,31 +26,34 @@ function send(msg, chat_id, api) {
  * @return {array} events_details_arr all sorted events for today
  */
 function getEvents() {
-  const calendar_ct = CalendarApp.getCalendarById(gmail_login_1)
-  const calendar_ns = CalendarApp.getCalendarById(gmail_login_2)
-  const now = new Date();
-  const events_ct = calendar_ct.getEventsForDay(now);
-  const events_ns = calendar_ns.getEventsForDay(now);
-  const events = events_ct.concat(events_ns);
-  const regExp = /<(?!\/?a>|\/?a href|\/?br)[^>]+>/g;
-  const events_details_arr = new Array();
+  const calendarsArr = CalendarApp.getAllCalendars();
 
-  events.forEach((el) => {
+  const now = new Date();
+  let eventsArr = new Array();
+  calendarsArr.forEach(e => {
+    if (!excludedCalendarsArr.includes(e.getName()) && e.getEventsForDay(now).length != 0) eventsArr.push(e.getEventsForDay(now))
+    eventsArr = eventsArr.flat();
+    })
+
+  const regExp = /<(?!\/?a>|\/?a href|\/?br)[^>]+>/g;
+  const eventsDetailsArr = new Array();
+
+  eventsArr.forEach((el) => {
     let descr = el.getDescription().toString();
     const title = el.getTitle();
     let start_time = el.getStartTime();
     start_time = new Date(start_time.getTime() + (6 * 60 * 60 * 1000)) //6 - разница во времени между NY и Berlin
     if (descr === '') {
-      events_details_arr.push([title,start_time]);
+      eventsDetailsArr.push([title,start_time]);
     } else {
-      descr = descr.replace(regExp,'').replace(/<br>/g,`\n`);
-      events_details_arr.push([title,start_time,`\n${descr}`]);
+      descr = descr.replace(regExp,'').replace(/<br>/g,`\n`).replace(/&nbsp;/g,' ');
+      eventsDetailsArr.push([title,start_time,`\n${descr}`]);
     }
   })
 
-  bubble_sort(events_details_arr)
+  bubble_sort(eventsDetailsArr)
 
-  return events_details_arr
+  return eventsDetailsArr
 }
 
 
@@ -101,12 +104,11 @@ function send_next_event() {
     let substract = today_events_arr[i][1].getTime() - cur_time.getTime();
     if (substract/36000000 < 0.02 && substract > 0.1) {
       today_events_arr[i][1] = time_to_string(today_events_arr[i][1]);
-
-    if (msg == "") {
-        msg = `${today_events_arr[i].flat()}`
-      } else {
-        msg = `${msg}\n${today_events_arr[i].flat()}`
-      }
+      if (msg == "") {
+          msg = `${today_events_arr[i].flat()}`
+        } else {
+          msg = `${msg}\n${today_events_arr[i].flat()}`
+        }
       send(msg,chat_id_root,API);
     }
   }
@@ -124,7 +126,6 @@ function send_all_events() {
       } else {
         msg = `${msg}\n${ind+1} ${el.flat()}`
       }
-      Logger.log(msg)
     })
 
     send(msg, chat_id_root, API);
